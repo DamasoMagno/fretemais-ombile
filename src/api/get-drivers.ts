@@ -7,7 +7,11 @@ interface Driver {
   licenseExpirationDate: string;
 }
 
-export async function getDrivers() {
-  const response = await api.get("/driver");
+export async function getDrivers(driver?: string) {
+  const response = await api.get("/driver", {
+    params: {
+      driverName: driver
+    }
+  });
   return response.data as Driver[];
 }

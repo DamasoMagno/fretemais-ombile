@@ -1,27 +1,8 @@
-import { Controller, UseFormReturn } from "react-hook-form";
-import { TextInput, TextInputProps } from "react-native";
-import { FreightInput } from "../../screens/freight";
+import { TextInputProps } from "react-native";
 import { Content } from "./styles";
 
-interface InputProps extends TextInputProps {
-  name: keyof FreightInput;
-  controller: UseFormReturn["control"];
-}
+interface InputProps extends TextInputProps {}
 
-export function Input({ name, controller, ...props }: InputProps) {
-  return (
-    <Controller
-      name={name}
-      control={controller}
-      render={({ field }) => {
-        return (
-          <Content
-            value={field.value}
-            onChangeText={field.onChange}
-            {...props}
-          />
-        );
-      }}
-    />
-  );
+export function Input({ ...props }: InputProps) {
+  return <Content {...props} />;
 }

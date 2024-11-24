@@ -1,15 +1,16 @@
 import { CargoType, Status, VehicleType } from "../interfaces";
 import { api } from "../services/api";
 
-interface Freight {
-  status: Status;
-  freightDate: Date;
-  transporter_id: number;
-  driver_id: number;
-  vehicleType: VehicleType;
-  cargoType: CargoType;
+interface Driver {
+  fullName: string;
+  licenseNumber: string;
+  licenseExpirationDate: string;
 }
 
-export async function registerFreight(data: Freight) {
-  await api.post(`/freight`, data);
+export async function registerDriver(data: Driver) {
+  try {
+    await api.post(`/driver`, data);
+  } catch (error) {
+    console.log(error.response)
+  }
 }

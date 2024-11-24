@@ -1,12 +1,21 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Loader2, Truck } from "lucide-react-native";
-import { TouchableOpacity, View, Text } from "react-native";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { format } from "date-fns";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, Truck } from "lucide-react-native";
+import DatePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import { Controller, useForm } from "react-hook-form";
+import { TouchableOpacity, Text, ActivityIndicator } from "react-native";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { Input } from "../../components/input";
+
 import { CargoType, Status, VehicleType } from "../../interfaces";
-import { api } from "../../services/api";
+import { api } from "@services/api";
+import { getTransporters } from "@api/get-transporters";
+import { getDrivers } from "@api/get-drivers";
+import { formatDate } from "@utils/format-date";
+import { registerFreight } from "@api/register-freight";
+import { updateFreight } from "@api/update-freight";
+
 import {
   Container,
   Content,
@@ -16,7 +25,9 @@ import {
   Form,
   FormSubmit,
   FormSubmitText,
+  SelectDate,
 } from "./styles";
+import { getFreight } from "@api/get-freight";
 
 interface Driver {
   id: number;
@@ -39,6 +50,15 @@ interface Freight {
   totalCost: number;
   driver: Driver;
   transporter: Transporter;
+}
+
+interface NewFreight {
+  status: Status;
+  freightDate: Date;
+  transporter_id: number;
+  driver_id: number;
+  vehicleType: VehicleType;
+  cargoType: CargoType;
 }
 
 interface DriverFreight {
@@ -79,47 +99,62 @@ const freightSchema = z.object({
 export type FreightInput = z.infer<typeof freightSchema>;
 
 export function Freight({ route, navigation }: any) {
-  console.log("here");
-
   const freightId = route.params?.appointmentId ?? "";
   const client = useQueryClient();
 
-  // const { data: freight } = useQuery({
-  //   queryKey: ["freight", freightId],
-  //   queryFn: async () => {
-  //     const response = await api.get(`/freight/${freightId}`);
-  //     return response.data as Freight;
-  //   },
-  //   enabled: !!freightId,
-  // });
+  const [modalDay, setModalDay] = useState(false);
 
-  // const { data: transporters } = useQuery({
-  //   queryKey: ["transporters"],
-  //   queryFn: async () => {
-  //     const response = await api.get("/transporter");
-  //     return response.data as Transporter[];
-  //   },
-  // });
+  const { data: freight } = useQuery({
+    queryKey: ["freight", freightId],
+    queryFn: () => getFreight(freightId),
+    enabled: !!freightId,
+  });
 
-  // const { data: drivers } = useQuery({
-  //   queryKey: ["drivers"],
-  //   queryFn: async () => {
-  //     const response = await api.get("/driver");
-  //     return response.data as Driver[];
-  //   },
-  // });
+  const [transporters, drivers] = useQueries({
+    queries: [
+      {
+        queryKey: ["transporters"],
+        queryFn: () => getTransporters(),
+      },
+      {
+        queryKey: ["drivers"],
+        queryFn: () => getDrivers(),
+      },
+    ],
+  });
+
+  const { mutateAsync: createNewFreight } = useMutation({
+    mutationFn: registerFreight,
+    onSuccess: () => {
+      client.invalidateQueries({
+        queryKey: ["freights"]
+      });
+
+      navigation.goBack();
+    },
+  });
+
+  const { mutateAsync: updateExistingFreight } = useMutation({
+    mutationFn: updateFreight,
+    onSuccess: () => {
+      client.invalidateQueries({
+        queryKey: ["freights"]
+      });
+      
+      navigation.goBack();
+    },
+  });
 
   const {
     handleSubmit,
-    setValue,
     control,
-    reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FreightInput>({
     defaultValues: {
       freightDate: new Date(),
       driver_id: 0,
-      cargoType: "PERISHABL",
+      cargoType: "HAZARDOUS",
       status: "IN_ROUTE",
       transporter_id: 0,
       vehicleType: "VAN",
@@ -127,6 +162,7 @@ export function Freight({ route, navigation }: any) {
   });
 
   const submittingFreight = isSubmitting;
+  const freightDate = watch("freightDate");
 
   return (
     <Container>
@@ -144,16 +180,183 @@ export function Freight({ route, navigation }: any) {
 
         <Form>
           <Text>Novo Frete</Text>
+          <Controller
+            control={control}
+            name="transporter_id"
+            render={({ field }) => {
+              return (
+                <Picker
+                  style={{
+                    height: 50,
+                    backgroundColor: "#e4e4e7",
+                    borderWidth: 8,
+                    borderColor: "#d4d4d8",
+                    borderRadius: 40,
+                  }}
+                  selectedValue={field.value}
+                  onValueChange={field.onChange}
+                >
+                  {transporters?.data?.map((transporter) => (
+                    <Picker.Item
+                      key={transporter.id}
+                      label={transporter.name}
+                      value={transporter.id}
+                    />
+                  ))}
+                </Picker>
+              );
+            }}
+          />
 
-          <Input controller={control} name="name" />
-          <Input controller={control} name="name" />
-          <Input controller={control} name="name" />
-          <Input controller={control} name="name" />
-          <Input controller={control} name="name" />
+          <Controller
+            control={control}
+            name="driver_id"
+            render={({ field }) => {
+              return (
+                <Picker
+                  style={{
+                    height: 50,
+                    backgroundColor: "#e4e4e7",
+                    borderWidth: 8,
+                    borderColor: "#d4d4d8",
+                    borderRadius: 40,
+                  }}
+                  selectedValue={field.value}
+                  onValueChange={field.onChange}
+                >
+                  {drivers?.data?.map((driver) => (
+                    <Picker.Item
+                      key={driver.id}
+                      label={driver.fullName}
+                      value={driver.id}
+                    />
+                  ))}
+                </Picker>
+              );
+            }}
+          />
 
-          <FormSubmit onPress={handleSubmit((data) => console.log(data))}>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => {
+              return (
+                <Picker
+                  style={{
+                    height: 50,
+                    backgroundColor: "#e4e4e7",
+                    borderWidth: 8,
+                    borderColor: "#d4d4d8",
+                    borderRadius: 40,
+                  }}
+                  selectedValue={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <Picker.Item value="IN_ROUTE" label="Em rota" />
+                  <Picker.Item
+                    value="WAITING_FOR_BID"
+                    label="Esperando entregar"
+                  />
+                  <Picker.Item value="DELIVERED" label="Entregue" />
+                </Picker>
+              );
+            }}
+          />
+
+          <Controller
+            control={control}
+            name="vehicleType"
+            render={({ field }) => {
+              return (
+                <Picker
+                  style={{
+                    height: 50,
+                    backgroundColor: "#e4e4e7",
+                    borderWidth: 8,
+                    borderColor: "#d4d4d8",
+                    borderRadius: 40,
+                  }}
+                  selectedValue={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <Picker.Item value="TRUCK" label="Caminhão" />
+                  <Picker.Item value="VAN" label="Van" />
+                </Picker>
+              );
+            }}
+          />
+
+          <Controller
+            control={control}
+            name="cargoType"
+            render={({ field }) => {
+              return (
+                <Picker
+                  style={{
+                    height: 50,
+                    backgroundColor: "#e4e4e7",
+                    borderWidth: 8,
+                    borderColor: "#d4d4d8",
+                    borderRadius: 40,
+                  }}
+                  selectedValue={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <Picker.Item value="HAZARDOUS" label="Perigoso" />
+                  <Picker.Item value="PERISHABL" label="Refrigerada" />
+                </Picker>
+              );
+            }}
+          />
+
+          <SelectDate onPress={() => setModalDay(true)}>
+            <Text>{formatDate(String(freightDate))}</Text>
+          </SelectDate>
+
+          <Controller
+            control={control}
+            name="freightDate"
+            render={({ field }) => {
+              return (
+                modalDay && (
+                  <DatePicker
+                    value={new Date()}
+                    mode="date"
+                    onChange={(event, value) => {
+                      setModalDay(false);
+
+                      const formattedDate = format(value, "yyyy-MM-dd");
+                      field.onChange(formattedDate);
+                    }}
+                  />
+                )
+              );
+            }}
+          />
+
+          <FormSubmit 
+          onPress={handleSubmit(async (data) => {
+            if (freightId) {
+              await updateExistingFreight({ freightId, data });
+              console.log("Atualizou");
+              return;
+            }
+            
+            const newFreight: NewFreight = {
+              cargoType: data.cargoType,
+              driver_id: data.driver_id,
+              freightDate: data.freightDate,
+              status: data.status,
+              transporter_id: data.transporter_id,
+              vehicleType: data.vehicleType
+            };
+
+            await createNewFreight(newFreight);
+            console.log("Cadastrou");
+          })}
+          >
             {submittingFreight ? (
-              <Loader2 />
+              <ActivityIndicator color="white" size={16} />
             ) : (
               <FormSubmitText>
                 {freightId ? "Atualizar" : "Cadastrar"}

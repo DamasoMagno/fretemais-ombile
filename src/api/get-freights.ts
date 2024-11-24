@@ -16,7 +16,11 @@ interface Freight {
   totalCoast: number;
 }
 
-export async function getFreights() {
-  const response = await api.get("/freight");
+export async function getFreights(freightNumber: number) {
+  const response = await api.get("/freight", {
+    params: {
+      freightNumber
+    }
+  })
   return response.data as Freight[];
 }

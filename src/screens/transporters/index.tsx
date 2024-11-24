@@ -1,34 +1,29 @@
-import { ScrollView, View } from "react-native";
-import { ChevronRight, Search, Trash } from "lucide-react-native";
-
-import {
-  Container,
-  PageTitle,
-  Freight,
-  FreightInfo,
-  Info,
-  FreightInfoData,
-  TransporterButton,
-  SearchInput,
-  SearchInputContent,
-  TransporterButtonDelete,
-  TransporterActions,
-} from "./styles";
+import { FlatList } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../services/api";
-import { formatCNPJ } from "../../utils/formatCNPJ";
+
 import { deleteTransporterById } from "../../api/delete-transporter";
 import { getTransporters } from "../../api/get-transporters";
 
+import { Container } from "./styles";
+import { useState } from "react";
+import { Search } from "../../components/search";
+import { Transporter } from "./components/transporter";
+import { FloatButton } from "@components/float-button";
+import { PageTitle } from "@components/page-title";
+
 export function Transporters({ navigation }: any) {
   const client = useQueryClient();
+  const [transporter, setTransporter] = useState("");
 
-  const { data } = useQuery({
-    queryKey: ["transporters"],
-    queryFn: getTransporters,
+  let timer;
+
+  const { data: transporters } = useQuery({
+    queryKey: ["transporters", transporter],
+    queryFn: () => getTransporters(transporter),
+    refetchOnWindowFocus: true,
   });
 
-  const { mutateAsync: deleteTransporter, isPending } = useMutation({
+  const { mutateAsync: deleteTransporter } = useMutation({
     mutationFn: deleteTransporterById,
     onSuccess: () => {
       client.invalidateQueries({
@@ -37,57 +32,49 @@ export function Transporters({ navigation }: any) {
     },
   });
 
+  function handleSearchTransporter(transporter: string) {
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+      setTransporter(transporter);
+    }, 1000);
+  }
+
   return (
     <Container>
       <PageTitle>Empresas</PageTitle>
 
-      <SearchInput>
-        <Search color="#475467" size={16} />
-        <SearchInputContent placeholder="Buscar transportadora" />
-      </SearchInput>
+      <Search
+        placeholder="Buscar transportadora"
+        onChangeText={handleSearchTransporter}
+      />
 
-      <ScrollView
-        scrollEnabled
+      <FlatList
+        data={transporters}
         contentContainerStyle={{
           gap: 12,
           paddingBottom: 100,
         }}
+        scrollEnabled
         showsVerticalScrollIndicator={false}
-      >
-        {data?.map((transporter) => {
+        keyExtractor={(data) => String(data.id)}
+        renderItem={({ item: transporter }) => {
           return (
-            <Freight key={transporter.id}>
-              <FreightInfo>
-                <Info>
-                  <FreightInfoData>Nome da empresa</FreightInfoData>
-                  <FreightInfoData>{transporter.name}</FreightInfoData>
-                </Info>
-
-                <Info>
-                  <FreightInfoData>CNPJ</FreightInfoData>
-                  <FreightInfoData>
-                    {formatCNPJ(transporter.cnpj)}
-                  </FreightInfoData>
-                </Info>
-              </FreightInfo>
-
-              <TransporterActions>
-                <TransporterButtonDelete
-                  onPress={() => deleteTransporter(transporter.id)}
-                >
-                  <Trash color="red" size={14} />
-                </TransporterButtonDelete>
-
-                <TransporterButton
-                  onPress={() => navigation.navigate("Transporter")}
-                >
-                  <ChevronRight color="white" size={14} />
-                </TransporterButton>
-              </TransporterActions>
-            </Freight>
+            <Transporter
+              key={transporter.id}
+              transporter={transporter}
+              onDelete={() => deleteTransporter(transporter.id)}
+              onNavigate={() =>
+                navigation.navigate("Transporter", {
+                  transporterId: transporter.id,
+                })
+              }
+            />
           );
-        })}
-      </ScrollView>
+        }}
+      />
+
+      <FloatButton onPress={() => navigation.navigate("Transporter")} />
     </Container>
   );
 }

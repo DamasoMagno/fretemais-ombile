@@ -1,8 +1,17 @@
 import styled from "styled-components/native";
 
-export const Container = styled.View`
-  background-color: #ffffff;
-  border-radius: 16px;
-  padding: 21px 14px;
-  gap: 24px;
+export const ItemContent = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+export const Enphase = styled.Text`
+  color: #475467;
+  font-size: 14px;
+`;
+
+export const Description = styled.Text`
+  color: #475467;
+  font-size: 14px;
 `;

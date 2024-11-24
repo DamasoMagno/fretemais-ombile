@@ -1,63 +1,25 @@
-import { ScrollView, View } from "react-native";
-import { ChevronRight, Search, Trash, Truck } from "lucide-react-native";
-
-import {
-  Container,
-  PageTitle,
-  Freight,
-  FreightResume,
-  FreightResumeIcon,
-  FreightResumeService,
-  FreightResumeTotalCoast,
-  FreightInfo,
-  Info,
-  FreightInfoData,
-  FreightButton,
-  SearchInput,
-  SearchInputContent,
-  FreightActions,
-  FreightButtonDelete,
-} from "./styles";
-
-import { CargoType, Status } from "../../interfaces";
+import { FlatList, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../services/api";
-import { formatCurrency } from "../../utils/format-currency";
-import { formatDate } from "../../utils/format-date";
-import { deleteFreightById } from "../../api/delete-freight";
-import { getFreights } from "../../api/get-freights";
 
-interface Transporter {
-  id: number;
-  name: string;
-}
+import { deleteFreightById } from "@api/delete-freight";
+import { getFreights } from "@api/get-freights";
 
-interface Freight {
-  id: number;
-  freightNumber: string;
-  status: Status;
-  freightDate: string;
-  transporter: Transporter;
-  cargoType: CargoType;
-  totalCoast: number;
-}
-
-const FREIGHT_STATUS = {
-  IN_ROUTE: "Em rota",
-  WAITING_FOR_BID: "Aguardando lance",
-  DELIVERED: "Entregue",
-};
-
-const CARGO_TYPE = {
-  PERISHABL: "Perecível",
-};
+import { Container } from "./styles";
+import { useState } from "react";
+import { Search } from "@components/search";
+import { Freight } from "./components/freight";
+import { FloatButton } from "@components/float-button";
+import { PageTitle } from "@components/page-title";
 
 export function Freights({ route, navigation }: any) {
   const client = useQueryClient();
+  const [freightNumber, setFreightNumber] = useState(0);
+
+  let timer;
 
   const { data: freights } = useQuery({
     queryKey: ["freights"],
-    queryFn: getFreights,
+    queryFn: () => getFreights(freightNumber),
   });
 
   const { mutateAsync: deleteFreight, isPending } = useMutation({
@@ -69,89 +31,47 @@ export function Freights({ route, navigation }: any) {
     },
   });
 
+  function handleSearchFreight(freightNumber: string) {
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+      setFreightNumber(Number(freightNumber));
+    }, 1000);
+  }
+
   return (
     <Container>
       <View>
         <PageTitle>Fretes disponíveis</PageTitle>
 
-        <SearchInput>
-          <Search color="#475467" size={16} />
-          <SearchInputContent placeholder="Buscar frete" />
-        </SearchInput>
+        <Search
+          placeholder="Buscar fretes"
+          onChangeText={handleSearchFreight}
+        />
 
-        <ScrollView
-          scrollEnabled
+        <FlatList
+          data={freights}
           contentContainerStyle={{
-            gap: 24,
+            gap: 12,
             paddingBottom: 100,
           }}
+          scrollEnabled
           showsVerticalScrollIndicator={false}
-        >
-          {freights?.map((freight) => {
+          keyExtractor={(data) => String(data.id)}
+          renderItem={({ item: freight }) => {
             return (
-              <Freight key={freight.id}>
-                <FreightResume>
-                  <FreightResumeIcon>
-                    <Truck color="#EBAF03" size={20} />
-                  </FreightResumeIcon>
-
-                  <View>
-                    <FreightResumeService>Custo total</FreightResumeService>
-                    <FreightResumeTotalCoast>
-                      {formatCurrency(freight.totalCoast)}
-                    </FreightResumeTotalCoast>
-                  </View>
-                </FreightResume>
-
-                <FreightInfo>
-                  <Info>
-                    <FreightInfoData>Número</FreightInfoData>
-                    <FreightInfoData>{freight.freightNumber}</FreightInfoData>
-                  </Info>
-
-                  <Info>
-                    <FreightInfoData>Data de retirada</FreightInfoData>
-                    <FreightInfoData>
-                      {formatDate(freight.freightDate)}
-                    </FreightInfoData>
-                  </Info>
-
-                  <Info>
-                    <FreightInfoData>Transportadora</FreightInfoData>
-                    <FreightInfoData>
-                      {freight.transporter.name}
-                    </FreightInfoData>
-                  </Info>
-
-                  <Info>
-                    <FreightInfoData>Tipo de carga</FreightInfoData>
-                    <FreightInfoData>
-                      {CARGO_TYPE[freight.cargoType]}
-                    </FreightInfoData>
-                  </Info>
-
-                  <Info>
-                    <FreightInfoData>Status</FreightInfoData>
-                    <FreightInfoData>
-                      {FREIGHT_STATUS[freight.status]}
-                    </FreightInfoData>
-                  </Info>
-                </FreightInfo>
-
-                <FreightActions>
-                  <FreightButtonDelete onPress={() => deleteFreight(freight.id)}>
-                    <Trash color="red" size={14} />
-                  </FreightButtonDelete>
-
-                  <FreightButton onPress={() => navigation.navigate("Freight")}>
-                    <ChevronRight color="white" size={14} />
-                  </FreightButton>
-                </FreightActions>
-              </Freight>
+              <Freight
+                key={freight.id}
+                freight={freight}
+                onDelete={() => deleteFreight(freight.id)}
+                onNavigate={() => navigation.navigate("Freight")}
+              />
             );
-          })}
-        </ScrollView>
+          }}
+        />
       </View>
+
+      <FloatButton onPress={() => navigation.navigate("Freight")} />
     </Container>
   );
 }

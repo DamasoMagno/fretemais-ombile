@@ -1,16 +1,10 @@
-import { Description, Enphase, ItemContent } from "./styles";
+import { ReactNode } from "react";
+import { Container as ItemContainer } from "./styles";
 
 interface ContentProps {
-  enphase: string;
-  description: string;
+  children: ReactNode;
 }
 
-export function Content({ description, enphase }: ContentProps) {
-  return (
-    <ItemContent>
-      <Enphase>{enphase}</Enphase>
-      <Description>{description}</Description>s
-    </ItemContent>
-  );
+export function Content({ children }: ContentProps) {
+  return <ItemContainer>{children}</ItemContainer>;
 }
-

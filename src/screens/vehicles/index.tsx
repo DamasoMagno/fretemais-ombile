@@ -1,71 +1,80 @@
-import { ScrollView, View } from "react-native";
-import { Search } from "lucide-react-native";
+import { useState } from "react";
+import { FlatList } from "react-native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  Container,
-  PageTitle,
-  Freight,
-  FreightInfo,
-  Info,
-  FreightInfoData,
-  FreightButton,
-  FreightButtonText,
-  SearchInput,
-  SearchInputContent,
-} from "./styles";
-import { useQuery } from "@tanstack/react-query";
-import { getVehicles } from "../../api/get-vehicles";
+import { getVehicles } from "@api/get-vehicles";
+import { deleteVehicleById } from "@api/delete-vehicle";
 
-const CAR_TYPES = {
-  "VAN": "Van",
-  "TRUCK": "Caminhão"
-}
+import { Vehicle } from "./components/vehicle";
+import { Search } from "@components/search";
+import { FloatButton } from "@components/float-button";
 
-export function Vehicles() {
-  const { data } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: getVehicles,
+import { Container } from "./styles";
+import { PageTitle } from "@components/page-title";
+
+export function Vehicles({ navigation }) {
+  const client = useQueryClient();
+  const [vehicle, setVehicle] = useState("");
+
+  let timer;
+
+  const { data: vehicles } = useQuery({
+    queryKey: ["vehicles", vehicle],
+    queryFn: () => getVehicles(vehicle),
   });
+
+  const { mutateAsync: deleteVehicle } = useMutation({
+    mutationFn: deleteVehicleById,
+    onSuccess: () => {
+      client.invalidateQueries({
+        queryKey: ["vehicles"],
+      });
+    },
+  });
+
+  function handleSearchVehicle(vehicle: string) {
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+      setVehicle(vehicle);
+    }, 1000);
+  }
 
   return (
     <Container>
       <PageTitle>Veículos</PageTitle>
 
-      <SearchInput>
-        <Search color="#475467" size={16} />
-        <SearchInputContent placeholder="Buscar veículo" />
-      </SearchInput>
+      <Search 
+        placeholder="Buscar veículo" 
+        onChangeText={handleSearchVehicle} 
+      />
 
-      <ScrollView
-        scrollEnabled
+      <FlatList
+        data={vehicles}
         contentContainerStyle={{
-          gap: 24,
+          gap: 12,
           paddingBottom: 100,
         }}
+        scrollEnabled
         showsVerticalScrollIndicator={false}
-      >
-        {data?.map(vehicle => {
+        keyExtractor={(data) => String(data.id)}
+        renderItem={({ item: vehicle }) => {
           return (
-            <Freight key={vehicle.id}>
-              <FreightInfo>
-                <Info>
-                  <FreightInfoData>Número da placa</FreightInfoData>
-                  <FreightInfoData>{vehicle.plateNumber}</FreightInfoData>
-                </Info>
-
-                <Info>
-                  <FreightInfoData>Tipo</FreightInfoData>
-                  <FreightInfoData>{CAR_TYPES[vehicle.vehicleType]}</FreightInfoData>
-                </Info>
-              </FreightInfo>
-
-              <FreightButton>
-                <FreightButtonText>Ver mais</FreightButtonText>
-              </FreightButton>
-            </Freight>
+            <Vehicle
+              key={vehicle.id}
+              vehicle={vehicle}
+              onDelete={() => deleteVehicle(vehicle.id)}
+              onNavigate={() =>
+                navigation.navigate("Vehicle", {
+                  vehicleId: vehicle.id,
+                })
+              }
+            />
           );
-        })}
-      </ScrollView>
+        }}
+      />
+
+      <FloatButton onPress={() => navigation.navigate("Vehicle")} />
     </Container>
   );
 }

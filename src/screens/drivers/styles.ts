@@ -97,14 +97,14 @@ export const SearchInputContent = styled.TextInput`
 export const DriverActions = styled.View`
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   justify-content: flex-end;
 `
 
 export const DriverButtonDelete = styled.TouchableOpacity`
   justify-content: center;
   align-items: center;
-  background-color: #f2f4f7;
+  background-color: #F2A4A1;
   border-radius: 8px;
   padding: 12px;
 `

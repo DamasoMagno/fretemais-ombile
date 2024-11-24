@@ -6,7 +6,11 @@ interface Transporter {
   cnpj: string;
 }
 
-export async function getTransporters() {
-  const response = await api.get("/transporter");
+export async function getTransporters(transporter?: string) {
+  const response = await api.get("/transporter", {
+    params: {
+      transporterName: transporter,
+    },
+  });
   return response.data as Transporter[];
 }

@@ -40,6 +40,6 @@ interface Driver {
 }
 
 export async function getFreight(freightId: number) {
-  const response = await api.get(`/freight/${freightId}`)
-      return response.data as Freight
+  const response = await api.get(`/freight/${freightId}`);
+  return response.data as Freight;
 }

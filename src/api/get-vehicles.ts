@@ -13,7 +13,11 @@ interface Vehicle {
   transporter: Transporter;
 }
 
-export async function getVehicles() {
-  const response = await api.get("/vehicle");
+export async function getVehicles(vehicle: string) {
+  const response = await api.get("/vehicle", {
+    params: {
+      vehicleName: vehicle
+    }
+  });
   return response.data as Vehicle[];
 }

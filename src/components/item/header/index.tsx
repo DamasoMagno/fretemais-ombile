@@ -1,10 +1,10 @@
 import { ReactNode } from "react";
-import { Container as ItemContainer } from "./styles";
+import { Container } from "./styles";
 
 interface ContentProps {
   children: ReactNode;
 }
 
-export function Item({ children }: ContentProps) {
-  return <ItemContainer>{children}</ItemContainer>;
+export function Header({ children }: ContentProps) {
+  return <Container>{children}</Container>;
 }

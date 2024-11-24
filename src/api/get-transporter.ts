@@ -7,6 +7,6 @@ interface Transporter {
 }
 
 export async function getTransporter(transporterId: number) {
-  const response = await api.get(`/transporter/${transporterId}`)
-  return response.data as Transporter
+  const response = await api.get(`/transporter/${transporterId}`);
+  return response.data as Transporter;
 }

@@ -11,5 +11,9 @@ interface Freight {
 }
 
 export async function registerFreight(data: Freight) {
-  await api.post(`/freight`, data);
+  try {
+    await api.post(`/freight`, data);
+  } catch (error) {
+    console.log(error.response)
+  }
 }
