@@ -1,3 +1,4 @@
+import { Picker } from "@react-native-picker/picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import styled from "styled-components/native";
 
@@ -62,3 +63,8 @@ export const SelectDate = styled.TouchableOpacity`
   padding: 12px;
   border-radius: 8px;
 `;
+
+export const SelectContainer = styled.View`
+  border-radius: 8px;
+  overflow: hidden;
+`

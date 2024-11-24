@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { FlatList } from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { deleteDriverById } from "@api/delete-driver";
 import { getDrivers } from "@api/get-drivers";
 
 import { Search } from "@components/search";
-
-import { Container } from "./styles";
 import { Driver } from "./components/driver";
 import { FloatButton } from "@components/float-button";
 import { PageTitle } from "@components/page-title";
+import { EmptyData } from "@components/empty-data";
+import { useRevalidate } from "@hooks/useRevalidate";
+
+import { Container } from "./styles";
 
 export function Drivers({ navigation }: any) {
-  const client = useQueryClient();
+  const { revalidateCache } = useRevalidate("drivers");
   const [driver, setDriver] = useState("");
 
   let timer;
@@ -26,9 +28,7 @@ export function Drivers({ navigation }: any) {
   const { mutateAsync: deleteDriver, isPending } = useMutation({
     mutationFn: deleteDriverById,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["drivers"],
-      });
+      revalidateCache()
     },
   });
 
@@ -72,6 +72,9 @@ export function Drivers({ navigation }: any) {
             />
           );
         }}
+        ListEmptyComponent={() => (
+          <EmptyData label="Nenhum motorista cadastrado" />
+        )}
       />
       <FloatButton onPress={() => navigation.navigate("Driver")} />
     </Container>

@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Loader2, Truck } from "lucide-react-native";
-import { TouchableOpacity, Text } from "react-native";
+import { TouchableOpacity, Text, View } from "react-native";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { Input } from "@components/input";
 import { api } from "@services/api";
 import { Picker } from "@react-native-picker/picker";
+import { Error } from "@components/error";
 
 import {
   Container,
@@ -21,6 +22,7 @@ import {
 import { getVehicle } from "@api/get-vehicle";
 import { registerVehicle } from "@api/register-vehicle";
 import { updateVehicle } from "@api/update-vehicle";
+import { useRevalidate } from "@hooks/useRevalidate";
 
 interface Transporter {
   id: number;
@@ -29,9 +31,9 @@ interface Transporter {
 }
 
 interface Vehicle {
-  plateNumber: string
-  vehicleType: string
-  transporter_id: number
+  plateNumber: string;
+  vehicleType: string;
+  transporter_id: number;
 }
 
 const vehicleSchema = z.object({
@@ -43,7 +45,8 @@ const vehicleSchema = z.object({
 type VehicleInput = z.infer<typeof vehicleSchema>;
 
 export function Vehicle({ route, navigation }: any) {
-  const client = useQueryClient()
+  const client = useQueryClient();
+  const { revalidateCache } = useRevalidate("vehicles")
   const vehicleId = route.params?.vehicleId ?? "";
 
   const { data: vehicle } = useQuery({
@@ -63,23 +66,17 @@ export function Vehicle({ route, navigation }: any) {
   const { mutateAsync: registerNewVehicle } = useMutation({
     mutationFn: registerVehicle,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["vehicles"]
-      });
-
-      navigation.goBack("Transporters")
-    }
+      revalidateCache()
+      navigation.goBack("Transporters");
+    },
   });
 
   const { mutateAsync: updateExistingVehicle } = useMutation({
     mutationFn: updateVehicle,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["vehicles"]
-      });
-
-      navigation.goBack("Transporters")
-    }
+      revalidateCache()
+      navigation.goBack("Transporters");
+    },
   });
 
   const {
@@ -113,69 +110,78 @@ export function Vehicle({ route, navigation }: any) {
 
         <Form>
           <Text>Novo Frete</Text>
-          <Controller
-            name="plateNumber"
-            control={control}
-            render={({ field }) => {
-              return (
-                <Input value={field.value} onChangeText={field.onChange} />
-              );
-            }}
-          />
+          <View>
+            <Controller
+              name="plateNumber"
+              control={control}
+              render={({ field }) => {
+                return (
+                  <Input value={field.value} onChangeText={field.onChange} />
+                );
+              }}
+            />
+            {Error(errors.plateNumber)}
+          </View>
 
-          <Controller
-            name="vehicleType"
-            control={control}
-            render={({ field }) => {
-              return (
-                <Picker
-                  selectedValue={field.value}
-                  onValueChange={(e) => field.onChange(e)}
-                >
-                  <Picker.Item value="TRUCK" label="Caminhão" />
-                  <Picker.Item value="VAN" label="Van" />
-                </Picker>
-              );
-            }}
-          />
+          <View>
+            <Controller
+              name="vehicleType"
+              control={control}
+              render={({ field }) => {
+                return (
+                  <Picker
+                    selectedValue={field.value}
+                    onValueChange={(e) => field.onChange(e)}
+                  >
+                    <Picker.Item value="TRUCK" label="Caminhão" />
+                    <Picker.Item value="VAN" label="Van" />
+                  </Picker>
+                );
+              }}
+            />
+            {Error(errors.vehicleType)}
+          </View>
 
-          <Controller
-            name="transporter_id"
-            control={control}
-            render={({ field }) => {
-              return (
-                <Picker
-                  selectedValue={field.value}
-                  onValueChange={(e) => field.onChange(e)}
-                >
-                  {transporters?.map((transporter) => (
-                    <Picker.Item
-                      key={transporter.id}
-                      label={transporter.name}
-                      value={transporter.id}
-                    />
-                  ))}
-                </Picker>
-              );
-            }}
-          />
+          <View>
+            <Controller
+              name="transporter_id"
+              control={control}
+              render={({ field }) => {
+                return (
+                  <Picker
+                    selectedValue={field.value}
+                    onValueChange={(e) => field.onChange(e)}
+                  >
+                    {transporters?.map((transporter) => (
+                      <Picker.Item
+                        key={transporter.id}
+                        label={transporter.name}
+                        value={transporter.id}
+                      />
+                    ))}
+                  </Picker>
+                );
+              }}
+            />
+            {Error(errors.transporter_id)}
+          </View>
 
-          <FormSubmit 
+          <FormSubmit
             onPress={handleSubmit(async (data) => {
               if (vehicleId) {
                 await updateExistingVehicle({ vehicleId, data });
-                console.log("Atualizou")
+                console.log("Atualizou");
                 return;
               }
 
               const newVehicle: Vehicle = {
                 plateNumber: data.plateNumber,
                 transporter_id: data.transporter_id,
-                vehicleType: data.vehicleType
+                vehicleType: data.vehicleType,
               };
 
               await registerNewVehicle(newVehicle);
-              console.log("Cadastrou")
+              console.log("Cadastrou");
             })}
           >
             {submittingFreight ? (

@@ -1,32 +1,28 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Loader2, Truck } from "lucide-react-native";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react-native";
 import { TouchableOpacity, Text, View, ActivityIndicator } from "react-native";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
-import { Input } from "../../components/input";
+import { z } from "zod";
+
+import { getTransporter } from "@api/get-transporter";
+import { registerTransporter } from "@api/register-transporter";
+import { updateTransporter } from "@api/update-transporter";
+
+import { Input } from "@components/input";
 import { Error } from "@components/error";
+import { InputMasked } from "@components/input-masked";
 
 import {
   Container,
   Content,
   ContentHeader,
   ContentHeaderTitle,
-  FreightIcon,
   Form,
   FormSubmit,
   FormSubmitText,
 } from "./styles";
-import { getTransporter } from "@api/get-transporter";
-import { InputMasked } from "@components/input-masked";
-import { registerTransporter } from "@api/register-transporter";
-import { updateTransporter } from "@api/update-transporter";
-
-interface Transporter {
-  id: number;
-  name: string;
-  cnpj: string;
-}
+import { useRevalidate } from "src/hooks/useRevalidate";
 
 const transporterSchema = z.object({
   name: z.string().min(1, "Nome da transportadora exigido"),
@@ -37,7 +33,7 @@ type TransporterInput = z.infer<typeof transporterSchema>;
 
 export function Transporter({ route, navigation }: any) {
   const transporterId = route.params?.transporterId ?? "";
-  const client = useQueryClient()
+  const { revalidateCache } = useRevalidate("transporters");
 
   const { data: transporter } = useQuery({
     queryKey: ["transporter", transporterId],
@@ -48,23 +44,17 @@ export function Transporter({ route, navigation }: any) {
   const { mutateAsync: registerNewTransporter } = useMutation({
     mutationFn: registerTransporter,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["transporters"]
-      });
-
-      navigation.goBack("Transporters")
-    }
+      revalidateCache();
+      navigation.goBack("Transporters");
+    },
   });
 
   const { mutateAsync: updateTransporterById } = useMutation({
     mutationFn: updateTransporter,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["transporters"]
-      });
-
-      navigation.goBack("Transporters")
-    }
+      revalidateCache();
+      navigation.goBack("Transporters");
+    },
   });
 
   const {
@@ -81,8 +71,6 @@ export function Transporter({ route, navigation }: any) {
 
   const submittingForm = isSubmitting;
 
-  console.log(transporter)
-
   return (
     <Container>
       <Content>
@@ -93,13 +81,7 @@ export function Transporter({ route, navigation }: any) {
           <ContentHeaderTitle>Detalhes do frete</ContentHeaderTitle>
         </ContentHeader>
 
-        <FreightIcon>
-          <Truck color="#015F3B" />
-        </FreightIcon>
-
         <Form>
-          <Text>Nova transportadora</Text>
-
           <View>
             <Text>Nome da transportadora</Text>
             <Controller
@@ -138,7 +120,6 @@ export function Transporter({ route, navigation }: any) {
             onPress={handleSubmit(async (data) => {
               if (transporterId) {
                 await updateTransporterById({ transporterId, data });
-                console.log("Atualizou")
                 return;
               }
 
@@ -147,7 +128,6 @@ export function Transporter({ route, navigation }: any) {
                 cnpj: data.cnpj,
               };
 
-              console.log("Cadastrou")
               await registerNewTransporter(newTransporter);
             })}
             disabled={submittingForm}

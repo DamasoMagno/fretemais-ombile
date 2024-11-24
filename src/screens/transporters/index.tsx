@@ -10,9 +10,12 @@ import { Search } from "../../components/search";
 import { Transporter } from "./components/transporter";
 import { FloatButton } from "@components/float-button";
 import { PageTitle } from "@components/page-title";
+import { EmptyData } from "@components/empty-data";
+import { useRevalidate } from "@hooks/useRevalidate";
 
 export function Transporters({ navigation }: any) {
   const client = useQueryClient();
+  const { revalidateCache } = useRevalidate("transporters")
   const [transporter, setTransporter] = useState("");
 
   let timer;
@@ -26,9 +29,7 @@ export function Transporters({ navigation }: any) {
   const { mutateAsync: deleteTransporter } = useMutation({
     mutationFn: deleteTransporterById,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["transporters"],
-      });
+      revalidateCache()
     },
   });
 
@@ -42,7 +43,7 @@ export function Transporters({ navigation }: any) {
 
   return (
     <Container>
-      <PageTitle>Empresas</PageTitle>
+      <PageTitle>Transportadoras</PageTitle>
 
       <Search
         placeholder="Buscar transportadora"
@@ -72,6 +73,9 @@ export function Transporters({ navigation }: any) {
             />
           );
         }}
+        ListEmptyComponent={() => (
+          <EmptyData label="Nenhuma transportadora cadastrada" />
+        )}
       />
 
       <FloatButton onPress={() => navigation.navigate("Transporter")} />

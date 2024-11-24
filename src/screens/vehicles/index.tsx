@@ -11,9 +11,11 @@ import { FloatButton } from "@components/float-button";
 
 import { Container } from "./styles";
 import { PageTitle } from "@components/page-title";
+import { EmptyData } from "@components/empty-data";
+import { useRevalidate } from "@hooks/useRevalidate";
 
 export function Vehicles({ navigation }) {
-  const client = useQueryClient();
+  const { revalidateCache } = useRevalidate("vehicles")
   const [vehicle, setVehicle] = useState("");
 
   let timer;
@@ -26,9 +28,7 @@ export function Vehicles({ navigation }) {
   const { mutateAsync: deleteVehicle } = useMutation({
     mutationFn: deleteVehicleById,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["vehicles"],
-      });
+      revalidateCache()
     },
   });
 
@@ -44,10 +44,7 @@ export function Vehicles({ navigation }) {
     <Container>
       <PageTitle>Veículos</PageTitle>
 
-      <Search 
-        placeholder="Buscar veículo" 
-        onChangeText={handleSearchVehicle} 
-      />
+      <Search placeholder="Buscar veículo" onChangeText={handleSearchVehicle} />
 
       <FlatList
         data={vehicles}
@@ -72,6 +69,9 @@ export function Vehicles({ navigation }) {
             />
           );
         }}
+        ListEmptyComponent={() => (
+          <EmptyData label="Nenhum veícuulo cadastrado" />
+        )}
       />
 
       <FloatButton onPress={() => navigation.navigate("Vehicle")} />

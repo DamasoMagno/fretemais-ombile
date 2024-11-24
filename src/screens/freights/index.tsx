@@ -1,18 +1,22 @@
-import { FlatList, View } from "react-native";
+import { useState } from "react";
+import { FlatList, View, Text } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { deleteFreightById } from "@api/delete-freight";
 import { getFreights } from "@api/get-freights";
 
-import { Container } from "./styles";
-import { useState } from "react";
 import { Search } from "@components/search";
 import { Freight } from "./components/freight";
 import { FloatButton } from "@components/float-button";
 import { PageTitle } from "@components/page-title";
 
+import { Container } from "./styles";
+import { EmptyData } from "@components/empty-data";
+import { useRevalidate } from "@hooks/useRevalidate";
+
 export function Freights({ route, navigation }: any) {
-  const client = useQueryClient();
+  const { revalidateCache } = useRevalidate("freights");
+
   const [freightNumber, setFreightNumber] = useState(0);
 
   let timer;
@@ -25,9 +29,7 @@ export function Freights({ route, navigation }: any) {
   const { mutateAsync: deleteFreight, isPending } = useMutation({
     mutationFn: deleteFreightById,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["freights"],
-      });
+      revalidateCache()
     },
   });
 
@@ -68,6 +70,9 @@ export function Freights({ route, navigation }: any) {
               />
             );
           }}
+          ListEmptyComponent={() => (
+            <EmptyData label="Nenhum frete cadastrado" />
+          )}
         />
       </View>
 

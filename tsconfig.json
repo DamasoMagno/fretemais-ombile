@@ -4,12 +4,13 @@
     "paths": {
       "@api/*" : ["src/api/*"],       
       "@components/*": ["src/components/*"], 
-      "@hook/*": ["src/hook/*"],
+      "@hooks/*": ["src/hooks/*"],
       "@routes/*": ["src/routes/*"],
       "@screens/*" : ["src/screens/*"],       
       "@services/*" : ["src/services/*"],       
       "@utils/*": ["src/utils/*"],
-      "@assets/*": ["src/assets/*"],        
+      "@assets/*": ["src/assets/*"], 
+      "@/*": ["src/*"]
     }
   },
   "extends": "expo/tsconfig.base"

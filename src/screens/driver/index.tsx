@@ -1,12 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Truck } from "lucide-react-native";
-import { TouchableOpacity, Text, ActivityIndicator } from "react-native";
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react-native";
+import { TouchableOpacity, Text, ActivityIndicator, View } from "react-native";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Controller, useForm } from "react-hook-form";
-import { Input } from "@components/input";
-import { Status } from "../../interfaces";
 import DatePicker from "@react-native-community/datetimepicker";
+import { Controller, useForm } from "react-hook-form";
+import { format } from "date-fns";
+import { z } from "zod";
+
+import { formatDate } from "@utils/format-date";
+import { Status } from "@/interfaces";
+
+import { registerDriver } from "@api/register-driver";
+import { getDriver } from "@api/get-driver";
+import { updateDriver } from "@api/update-driver";
+
+import { useRevalidate } from "@hooks/useRevalidate";
+
+import { Error } from "@components/error";
+import { Input } from "@components/input";
 
 import {
   Container,
@@ -18,12 +30,6 @@ import {
   FormSubmitText,
   SelectDate,
 } from "./styles";
-import { getDriver } from "@api/get-driver";
-import { useState } from "react";
-import { registerDriver } from "@api/register-driver";
-import { updateDriver } from "@api/update-driver";
-import { formatDate } from "@utils/format-date";
-import { format } from "date-fns";
 
 interface DriverFreight {
   id: number;
@@ -45,8 +51,7 @@ const driverSchema = z.object({
     .string()
     .min(1, "Por favor, informe o nome completo do motorista."),
   licenseNumber: z.string().min(1, "O número da licença é obrigatório."),
-  licenseExpirationDate: z
-    .coerce
+  licenseExpirationDate: z.coerce
     .string()
     .min(1, "A data de expiração da licença é obrigatória."),
 });
@@ -55,7 +60,8 @@ type DriverInput = z.infer<typeof driverSchema>;
 
 export function Driver({ route, navigation }: any) {
   const driverId = route.params?.driverId ?? "";
-  const client = useQueryClient();
+  const { revalidateCache } = useRevalidate("");
+
   const [modalDay, setModalDay] = useState(false);
 
   const { data: driver, isLoading: loadingDriver } = useQuery({
@@ -64,25 +70,20 @@ export function Driver({ route, navigation }: any) {
     enabled: !!driverId,
   });
 
+
   const { mutateAsync: createNewDriver } = useMutation({
     mutationFn: registerDriver,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["drivers"]
-      });
-
-      navigation.goBack();
+      revalidateCache()
+      navigation.goBack("Drivers");
     },
   });
 
   const { mutateAsync: updateExistindgDriver } = useMutation({
     mutationFn: updateDriver,
     onSuccess: () => {
-      client.invalidateQueries({
-        queryKey: ["drivers"]
-      });
-      
-      navigation.goBack();
+      revalidateCache()
+      navigation.goBack("Drivers");
     },
   });
 
@@ -103,7 +104,7 @@ export function Driver({ route, navigation }: any) {
   const submittingForm = isSubmitting;
   const licenseExpirationDate = watch("licenseExpirationDate");
 
-  console.log(errors)
+  console.log(errors);
 
   return (
     <Container>
@@ -113,35 +114,45 @@ export function Driver({ route, navigation }: any) {
             <ChevronLeft color="#667085" size={20} />
           </TouchableOpacity>
           <ContentHeaderTitle>
-            {driverId ? "Atualizar motorista" : "Cadastrra motorist"}
+            {driverId ? "Editar motorista" : "Cadastrar motorista"}
           </ContentHeaderTitle>
         </ContentHeader>
 
         <Form>
-          <Text>Novo Frete</Text>
-          <Controller
-            control={control}
-            name="fullName"
-            render={({ field }) => {
-              return (
-                <Input value={field.value} onChangeText={field.onChange} />
-              );
-            }}
-          />
+          <View>
+            <Controller
+              control={control}
+              name="fullName"
+              render={({ field }) => {
+                return (
+                  <Input value={field.value} onChangeText={field.onChange} />
+                );
+              }}
+            />
+            {Error(errors.fullName)}
+          </View>
 
-          <Controller
-            control={control}
-            name="licenseNumber"
-            render={({ field }) => {
-              return (
-                <Input value={field.value} onChangeText={field.onChange} />
-              );
-            }}
-          />
+          <View>
+            <Controller
+              control={control}
+              name="licenseNumber"
+              render={({ field }) => {
+                return (
+                  <Input value={field.value} onChangeText={field.onChange} />
+                );
+              }}
+            />
+            {Error(errors.licenseNumber)}
+          </View>
 
-          <SelectDate onPress={() => setModalDay(true)}>
-            <Text>{formatDate(licenseExpirationDate)}</Text>
-          </SelectDate>
+          <View>
+            <SelectDate onPress={() => setModalDay(true)}>
+              <Text>
+                {licenseExpirationDate ? formatDate(licenseExpirationDate) : ""}
+              </Text>
+            </SelectDate>
+            {Error(errors.licenseExpirationDate)}
+          </View>
 
           <Controller
             control={control}
@@ -155,8 +166,8 @@ export function Driver({ route, navigation }: any) {
                     onChange={(event, value) => {
                       setModalDay(false);
 
-                      const formattedDate = format(value, 'yyyy-MM-dd');
-                      field.onChange(formattedDate)
+                      const formattedDate = format(value, "yyyy-MM-dd");
+                      field.onChange(formattedDate);
                     }}
                   />
                 )
@@ -171,7 +182,7 @@ export function Driver({ route, navigation }: any) {
                 console.log("Atualizou");
                 return;
               }
-              
+
               const newDriver: Omit<Driver, "id" | "freights"> = {
                 fullName: data.fullName,
                 licenseExpirationDate: data.licenseExpirationDate,
